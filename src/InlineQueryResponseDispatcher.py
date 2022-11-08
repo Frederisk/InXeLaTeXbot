@@ -2,7 +2,6 @@ import re
 from multiprocessing import Event, Lock, Process
 from threading import Thread
 
-    InlineQueryResultCachedPhoto, TelegramError, ParseMode
 from telegram import (InlineQueryResultArticle, InlineQueryResultCachedPhoto,
                       InputTextMessageContent, ParseMode, TelegramError)
 
