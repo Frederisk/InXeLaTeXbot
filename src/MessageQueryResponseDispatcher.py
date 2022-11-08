@@ -1,4 +1,4 @@
-from multiprocessing import Process, Lock, Event
+from multiprocessing import Event, Lock, Process
 from threading import Thread
 
 from telegram import TelegramError

@@ -1,9 +1,10 @@
-from multiprocessing import Process, Lock, Event
-from threading import Thread
 import re
+from multiprocessing import Event, Lock, Process
+from threading import Thread
 
-from telegram import InlineQueryResultArticle, InputTextMessageContent, \
     InlineQueryResultCachedPhoto, TelegramError, ParseMode
+from telegram import (InlineQueryResultArticle, InlineQueryResultCachedPhoto,
+                      InputTextMessageContent, ParseMode, TelegramError)
 
 from src.LoggingServer import LoggingServer
 

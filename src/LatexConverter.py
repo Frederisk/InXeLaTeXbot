@@ -1,9 +1,9 @@
-from subprocess import check_output, CalledProcessError, STDOUT, TimeoutExpired
-
-from src.PreambleManager import PreambleManager
-from src.LoggingServer import LoggingServer
 import io
 import re
+from subprocess import STDOUT, CalledProcessError, TimeoutExpired, check_output
+
+from src.LoggingServer import LoggingServer
+from src.PreambleManager import PreambleManager
 
 
 class LatexConverter():

@@ -1,9 +1,8 @@
-from multiprocessing import Queue
-from threading import Thread
-
 import logging
 from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
+from multiprocessing import Queue
+from threading import Thread
 
 
 class LoggingServer():

@@ -1,8 +1,9 @@
-from subprocess import check_output, CalledProcessError, STDOUT
-from multiprocessing import Lock
 import pickle as pkl
-from src.ResourceManager import ResourceManager
+from multiprocessing import Lock
+from subprocess import STDOUT, CalledProcessError, check_output
+
 from src.LoggingServer import LoggingServer
+from src.ResourceManager import ResourceManager
 
 
 class PreambleManager():
