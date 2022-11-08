@@ -1,5 +1,10 @@
-*pyc
+# tmp file
+*.pyc
 build/*
+log/*
 *checkpoints
 *.ipynb
-log/*
+
+# python database
+*.pkl
+!default.pkl
