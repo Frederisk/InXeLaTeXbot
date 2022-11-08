@@ -1,6 +1,6 @@
 # InXeLaTeXbot
 
-![InXeLaTeX Logo](https://user-images.githubusercontent.com/29837738/200606485-700601ad-22ba-4f11-83cb-63533a759062.svg)
+![InXeLaTeX Logo](https://user-images.githubusercontent.com/29837738/200657234-e987ad3e-6746-4bf4-b356-1e3f93beceff.svg)
 
 Inline XeLaTeX bot for <a href=https://telegram.org>Telegram</a> messenger to send pictures with any XeLaTeX content to anyone from any device. Find it here: <http://t.me/InXeLaTeXbot>.
 
