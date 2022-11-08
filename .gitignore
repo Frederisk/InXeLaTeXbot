@@ -8,3 +8,6 @@ log/*
 # python database
 *.pkl
 !default.pkl
+
+# env file
+.env

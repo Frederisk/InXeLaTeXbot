@@ -1,21 +1,22 @@
+import html
+import os
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from time import sleep
 
-from telegram import InlineQueryResultArticle, InputTextMessageContent, \
-    InlineQueryResultCachedPhoto, InlineQueryResult, TelegramError
-from telegram.ext import Updater, CommandHandler, InlineQueryHandler, \
-    MessageHandler, Filters, DispatcherHandlerStop
-import html
-
+from telegram import (InlineQueryResult, InlineQueryResultArticle,
+                      InlineQueryResultCachedPhoto, InputTextMessageContent,
+                      TelegramError)
+from telegram.ext import (CommandHandler, DispatcherHandlerStop, Filters,
+                          InlineQueryHandler, MessageHandler, Updater)
 from tqdm.notebook import tqdm
 
+from src.InlineQueryResponseDispatcher import InlineQueryResponseDispatcher
 from src.LatexConverter import LatexConverter
+from src.LoggingServer import LoggingServer
+from src.MessageQueryResponseDispatcher import MessageQueryResponseDispatcher
 from src.PreambleManager import PreambleManager
 from src.ResourceManager import ResourceManager
-from src.InlineQueryResponseDispatcher import InlineQueryResponseDispatcher
-from src.MessageQueryResponseDispatcher import MessageQueryResponseDispatcher
-from src.LoggingServer import LoggingServer
 from src.UserOptionsManager import UserOptionsManager
 from src.UsersManager import UsersManager
 
@@ -250,7 +251,7 @@ class InLaTeXbot():
 
 
 if __name__ == '__main__':
-    updater = Updater('TOKEN_HERE')
-    chat_id = -1
+    updater = Updater(os.environ.get('BOT_TOKEN'))
+    chat_id = int(os.environ.get('GROUP_ID'))
     bot = InLaTeXbot(updater, chat_id)
     bot.launch()
