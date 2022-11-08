@@ -21,7 +21,7 @@ class InlineQueryResponseDispatcher():
 
     def dispatchInlineQueryResponse(self, inline_query):
 
-        self.logger.debug("Received inline query: " + inline_query.query + \
+        self.logger.debug("Received inline query: " + inline_query.query +
                           ", id: " + str(inline_query.id) + ", from user: " + str(inline_query.from_user.id))
 
         try:
@@ -58,13 +58,16 @@ class InlineQueryResponseDispatcher():
         except ValueError as err:
             result = self.getWrongSyntaxResult(expression, err.args[0])
         except TelegramError as err:
-            errorMessage = self._resourceManager.getString("telegram_error") + str(err)
+            errorMessage = self._resourceManager.getString(
+                "telegram_error") + str(err)
             self.logger.warn(errorMessage)
-            result = InlineQueryResultArticle(0, errorMessage, InputTextMessageContent(expression))
+            result = InlineQueryResultArticle(
+                0, errorMessage, InputTextMessageContent(expression))
         finally:
             if not self.skipForNewerQuery(nextQueryArrivedEvent, senderId, expression):
                 self._bot.answerInlineQuery(queryId, [result], cache_time=0)
-                self.logger.debug("Answered to inline query from %d, expression: %s", senderId, expression)
+                self.logger.debug(
+                    "Answered to inline query from %d, expression: %s", senderId, expression)
 
     def skipForNewerQuery(self, nextQueryArrivedEvent, senderId, expression):
         if nextQueryArrivedEvent.is_set():
@@ -76,10 +79,12 @@ class InlineQueryResponseDispatcher():
     def getWrongSyntaxResult(self, query, latexError):
         if len(query) >= 250:
             self.logger.debug("Query may be too long")
-            errorMessage = self._resourceManager.getString("inline_query_too_long")
+            errorMessage = self._resourceManager.getString(
+                "inline_query_too_long")
         else:
             self.logger.debug("Wrong syntax in the query")
-            errorMessage = self._resourceManager.getString("latex_syntax_error")
+            errorMessage = self._resourceManager.getString(
+                "latex_syntax_error")
         return InlineQueryResultArticle(0, errorMessage, InputTextMessageContent(query), description=latexError)
 
     def uploadImage(self, image, expression, caption, code_in_caption):
@@ -88,14 +93,17 @@ class InlineQueryResponseDispatcher():
 
         while attempts < 3:
             try:
-                latex_picture_id = self._bot.sendPhoto(self._devnullChatId, image).photo[0].file_id
-                self.logger.debug("Image successfully uploaded for %s", expression)
+                latex_picture_id = self._bot.sendPhoto(
+                    self._devnullChatId, image).photo[0].file_id
+                self.logger.debug(
+                    "Image successfully uploaded for %s", expression)
 
                 return InlineQueryResultCachedPhoto(0, photo_file_id=latex_picture_id,
                                                     caption=caption,
                                                     parse_mode=ParseMode.MARKDOWN if not code_in_caption else None)
             except TelegramError as err:
-                errorMessage = self._resourceManager.getString("telegram_error") + str(err)
+                errorMessage = self._resourceManager.getString(
+                    "telegram_error") + str(err)
                 self.logger.warn(errorMessage)
                 attempts += 1
 
@@ -106,16 +114,19 @@ class InlineQueryResponseDispatcher():
             return expression
         else:
             regex = r"^%\*"
-            expression = re.sub(regex, r"\\iffalse inlatexbot", expression, flags=re.MULTILINE)
+            expression = re.sub(regex, r"\\iffalse inlatexbot",
+                                expression, flags=re.MULTILINE)
 
             regex = r"\*%"
             return re.sub(regex, r"inlatexbot \\fi", expression, flags=re.MULTILINE)
 
     def generateCaption(self, senderId, expression):
         if self._userOptionsManager.getCodeInCaptionOption(senderId) is True:
-            return expression[:200]  # no comments, return everything (max 200 symbols)
+            # no comments, return everything (max 4000 symbols)
+            return expression[:4000]
         else:
-            regex = r"^%( *\S+.*?)$|\\iffalse inlatexbot\n(.+?)inlatexbot \\fi"  # searching for comments, which are then only included
+            # searching for comments, which are then only included
+            regex = r"^%( *\S+.*?)$|\\iffalse inlatexbot\n(.+?)inlatexbot \\fi"
 
             groups = re.findall(regex, expression, re.MULTILINE | re.DOTALL)
 

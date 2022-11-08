@@ -11,4 +11,3 @@
 \usepackage{physics}
 \usepackage{lipsum}
 \pagenumbering{gobble}
-
