@@ -1,5 +1,6 @@
 import html
 import os
+import json
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from time import sleep
@@ -251,7 +252,13 @@ class InLaTeXbot():
 
 
 if __name__ == '__main__':
-    updater = Updater(os.environ.get('BOT_TOKEN'))
-    chat_id = int(os.environ.get('GROUP_ID'))
+    # updater = Updater(os.environ.get('BOT_TOKEN'))
+    # chat_id = int(os.environ.get('GROUP_ID'))
+    f = open('config.json', 'r')
+    config = json.load(f)
+
+    updater = Updater(config['BOT_TOKEN'])
+    chat_id = config['GROUP_ID']
+    # WARNING: Please delete config file or make it secure to avoid leaking sensitive information
     bot = InLaTeXbot(updater, chat_id)
     bot.launch()
