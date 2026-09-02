@@ -1,14 +1,21 @@
+import os
+import glob
 import io
-import re
-from subprocess import STDOUT, CalledProcessError, TimeoutExpired, check_output
+from subprocess import check_output, CalledProcessError, STDOUT, TimeoutExpired
 
-from src.LoggingServer import LoggingServer
 from src.PreambleManager import PreambleManager
+from src.LoggingServer import LoggingServer
 
 
 class LatexConverter():
 
     logger = LoggingServer.getInstance()
+
+    SAFE_ENV = {
+        "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+        "openin_any": "p",
+        "openout_any": "p",
+    }
 
     def __init__(self, preambleManager, userOptionsManager):
         self._preambleManager = preambleManager
@@ -16,14 +23,14 @@ class LatexConverter():
 
     def extractBoundingBox(self, dpi, pathToPdf):
         try:
-            bbox = check_output("gs -q -dBATCH -dNOPAUSE -sDEVICE=bbox " + pathToPdf,
-                                stderr=STDOUT, shell=True).decode("ascii")
+            bbox = check_output([
+                "gs", "-dSAFER", "-q", "-dBATCH", "-dNOPAUSE", "-sDEVICE=bbox", pathToPdf
+            ], stderr=STDOUT, env=self.SAFE_ENV).decode("ascii")
         except CalledProcessError:
-            raise ValueError(
-                "Could not extract bounding box! Empty expression?")
+            raise ValueError("Could not extract bounding box! Empty expression?")
+
         try:
-            bounds = [int(_) for _ in bbox[bbox.index(
-                ":")+2:bbox.index("\n")].split(" ")]
+            bounds = [int(_) for _ in bbox[bbox.index(":")+2:bbox.index("\n")].split(" ")]
         except ValueError:
             raise ValueError("Could not parse bounding box! Empty expression?")
 
@@ -39,102 +46,141 @@ class LatexConverter():
         ruc = bounds[2:]
         ruc[0] += hpad
         ruc[1] += vpad
-        size_factor = dpi/72.27
-        width = (ruc[0]-llc[0])*size_factor
-        height = (ruc[1]-llc[1])*size_factor
+        size_factor = dpi / 72.27
+        width = (ruc[0] - llc[0]) * size_factor
+        height = (ruc[1] - llc[1]) * size_factor
         translation_x = llc[0]
         translation_y = llc[1]
         return width, height, -translation_x, -translation_y
 
     def correctBoundingBoxAspectRaito(self, dpi, boundingBox, maxWidthToHeight=3, maxHeightToWidth=1):
         width, height, translation_x, translation_y = boundingBox
-        size_factor = dpi/72.27
-        if width > maxWidthToHeight*height:
-            translation_y += (width/maxWidthToHeight-height)/2/size_factor
-            height = width/maxWidthToHeight
-        elif height > maxHeightToWidth*width:
-            translation_x += (height/maxHeightToWidth-width)/2/size_factor
-            width = height/maxHeightToWidth
+        size_factor = dpi / 72.27
+        if width > maxWidthToHeight * height:
+            translation_y += (width / maxWidthToHeight - height) / 2 / size_factor
+            height = width / maxWidthToHeight
+        elif height > maxHeightToWidth * width:
+            translation_x += (height / maxHeightToWidth - width) / 2 / size_factor
+            width = height / maxHeightToWidth
         return width, height, translation_x, translation_y
 
     def getError(self, log):
         for idx, line in enumerate(log):
             if line[:2] == "! ":
                 return "".join(log[idx:idx+2])
+        return "Unknown LaTeX compilation error"
 
-    def pdflatex(self, fileName):
+    def pdflatex(self, fileName, userId=None):
+        cmd = ['xelatex']
+
+        # 白名單判定
+        if userId in [691216126]:
+            cmd.append('-shell-escape')
+        else:
+            cmd.append('-no-shell-escape')
+
+        cmd.extend([
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "-output-directory", "build",
+            fileName
+        ])
+
         try:
-            check_output(['xelatex', "-interaction=nonstopmode", "-output-directory",
-                          "build", fileName], stderr=STDOUT, timeout=16)
-        except CalledProcessError as inst:
-            with open(fileName[:-3]+"log", "r") as f:
-                msg = self.getError(f.readlines())
-                self.logger.debug(msg)
-                raise ValueError(msg)
+            check_output(
+                cmd,
+                stderr=STDOUT,
+                timeout=16,
+                env=self.SAFE_ENV
+            )
+        except CalledProcessError:
+            log_file = os.path.splitext(fileName)[0] + ".log"
+            try:
+                with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+                    msg = self.getError(f.readlines())
+            except Exception:
+                msg = "LaTeX compilation failed and log could not be read."
+            self.logger.debug(msg)
+            raise ValueError(msg)
         except TimeoutExpired:
             msg = "xelatex has likely hung up and had to be killed. Congratulations!"
             raise ValueError(msg)
 
-    def cropPdf(self, sessionId):  # TODO: this is intersecting with the png part
-        bbox = check_output("gs -q -dBATCH -dNOPAUSE -sDEVICE=bbox build/expression_file_%s.pdf" % sessionId,
-                            stderr=STDOUT, shell=True).decode("ascii")
-        bounds = tuple(
-            [int(_) for _ in bbox[bbox.index(":")+2:bbox.index("\n")].split(" ")])
+    def cropPdf(self, sessionId):
+        pdf_file = f"build/expression_file_{sessionId}.pdf"
+        bbox = check_output([
+            "gs", "-dSAFER", "-q", "-dBATCH", "-dNOPAUSE", "-sDEVICE=bbox", pdf_file
+        ], stderr=STDOUT, env=self.SAFE_ENV).decode("ascii")
 
-        command_crop = 'gs -o build/expression_file_cropped_%s.pdf -sDEVICE=pdfwrite\
-                         -c "[/CropBox [%d %d %d %d]"   -c " /PAGES pdfmark" -f build/expression_file_%s.pdf'\
-                         % ((sessionId,)+bounds+(sessionId,))
-        check_output(command_crop, stderr=STDOUT, shell=True)
+        bounds = tuple([int(_) for _ in bbox[bbox.index(":")+2:bbox.index("\n")].split(" ")])
+
+        cmd = [
+            "gs", "-dSAFER",
+            "-o", f"build/expression_file_cropped_{sessionId}.pdf",
+            "-sDEVICE=pdfwrite",
+            "-c", f"[/CropBox [{bounds[0]} {bounds[1]} {bounds[2]} {bounds[3]}] /PAGES pdfmark",
+            "-f", pdf_file
+        ]
+        check_output(cmd, stderr=STDOUT, env=self.SAFE_ENV)
 
     def convertPdfToPng(self, dpi, sessionId, bbox):
-        command = 'gs  -o build/expression_%s.png -r%d -sDEVICE=pngalpha  -g%dx%d  -dLastPage=1 \
-                    -c "<</Install {%d %d translate}>> setpagedevice" -f build/expression_file_%s.pdf'\
-                    % ((sessionId, dpi)+bbox+(sessionId,))
-        check_output(command, stderr=STDOUT, shell=True)
+        cmd = [
+            "gs", "-dSAFER",
+            "-o", f"build/expression_{sessionId}.png",
+            f"-r{int(dpi)}",
+            "-sDEVICE=pngalpha",
+            f"-g{int(bbox[0])}x{int(bbox[1])}",
+            "-dLastPage=1",
+            "-c", f"<</Install {{{int(bbox[2])} {int(bbox[3])} translate}}>> setpagedevice",
+            "-f", f"build/expression_file_{sessionId}.pdf"
+        ]
+        check_output(cmd, stderr=STDOUT, env=self.SAFE_ENV)
 
     def convertExpression(self, expression, userId, sessionId, returnPdf=False):
-
         if r"\documentclass" in expression:
             fileString = expression
         else:
             try:
-                preamble = self._preambleManager.getPreambleFromDatabase(
-                    userId)
+                preamble = self._preambleManager.getPreambleFromDatabase(userId)
                 self.logger.debug("Preamble for userId %d found", userId)
             except KeyError:
-                self.logger.debug(
-                    "Preamble for userId %d not found, using default preamble", userId)
+                self.logger.debug("Preamble for userId %d not found, using default preamble", userId)
                 preamble = self._preambleManager.getDefaultPreamble()
             finally:
-                fileString = preamble + \
-                    "\n\\begin{document}\n"+expression+"\n\\end{document}"
+                fileString = preamble + "\n\\begin{document}\n" + expression + "\n\\end{document}"
 
-        with open("build/expression_file_%s.tex" % sessionId, "w+") as f:
+        tex_path = f"build/expression_file_{sessionId}.tex"
+        with open(tex_path, "w", encoding="utf-8") as f:
             f.write(fileString)
 
         dpi = self._userOptionsManager.getDpiOption(userId)
 
         try:
-            self.pdflatex("build/expression_file_%s.tex" % sessionId)
+            self.pdflatex(tex_path, userId)
 
-            bbox = self.extractBoundingBox(
-                dpi, "build/expression_file_%s.pdf" % sessionId)
+            pdf_path = f"build/expression_file_{sessionId}.pdf"
+            bbox = self.extractBoundingBox(dpi, pdf_path)
             bbox = self.correctBoundingBoxAspectRaito(dpi, bbox)
             self.convertPdfToPng(dpi, sessionId, bbox)
 
             self.logger.debug("Generated image for %s", expression)
 
-            with open("build/expression_%s.png" % sessionId, "rb") as f:
+            png_path = f"build/expression_{sessionId}.png"
+            with open(png_path, "rb") as f:
                 imageBinaryStream = io.BytesIO(f.read())
 
             if returnPdf:
                 self.cropPdf(sessionId)
-                with open("build/expression_file_cropped_%s.pdf" % sessionId, "rb") as f:
+                cropped_pdf_path = f"build/expression_file_cropped_{sessionId}.pdf"
+                with open(cropped_pdf_path, "rb") as f:
                     pdfBinaryStream = io.BytesIO(f.read())
                 return imageBinaryStream, pdfBinaryStream
             else:
                 return imageBinaryStream
 
         finally:
-            check_output(["rm build/*_%s.*" % sessionId],
-                         stderr=STDOUT, shell=True)
+            for temp_file in glob.glob(f"build/*_{sessionId}.*"):
+                try:
+                    os.remove(temp_file)
+                except OSError:
+                    pass

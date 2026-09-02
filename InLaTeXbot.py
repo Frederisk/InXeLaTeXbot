@@ -1,23 +1,21 @@
-import html
-import os
-import json
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from time import sleep
 
-from telegram import (InlineQueryResult, InlineQueryResultArticle,
-                      InlineQueryResultCachedPhoto, InputTextMessageContent,
-                      TelegramError)
-from telegram.ext import (CommandHandler, DispatcherHandlerStop, Filters,
-                          InlineQueryHandler, MessageHandler, Updater)
+from telegram import TelegramError
+from telegram.ext import Updater, CommandHandler, InlineQueryHandler, \
+    MessageHandler, Filters, DispatcherHandlerStop
+import html
+import os
+# import json
 from tqdm.notebook import tqdm
 
-from src.InlineQueryResponseDispatcher import InlineQueryResponseDispatcher
 from src.LatexConverter import LatexConverter
-from src.LoggingServer import LoggingServer
-from src.MessageQueryResponseDispatcher import MessageQueryResponseDispatcher
 from src.PreambleManager import PreambleManager
 from src.ResourceManager import ResourceManager
+from src.InlineQueryResponseDispatcher import InlineQueryResponseDispatcher
+from src.MessageQueryResponseDispatcher import MessageQueryResponseDispatcher
+from src.LoggingServer import LoggingServer
 from src.UserOptionsManager import UserOptionsManager
 from src.UsersManager import UsersManager
 
@@ -27,6 +25,7 @@ class InLaTeXbot():
     logger = LoggingServer.getInstance()
 
     def __init__(self, updater, devnullChatId=-1):
+        os.makedirs("build", exist_ok=True)
 
         self._updater = updater
         self._resourceManager = ResourceManager()
@@ -161,7 +160,7 @@ class InLaTeXbot():
         update.message.reply_text(
             self._resourceManager.getString("checking_preamble"))
         valid, preamble_error_message = self._preambleManager.validatePreamble(
-            preamble)
+            preamble, senderId)
         if valid:
             self.logger.debug("Registering preamble for user %d", senderId)
             self._preambleManager.putPreambleToDatabase(senderId, preamble)
@@ -252,13 +251,13 @@ class InLaTeXbot():
 
 
 if __name__ == '__main__':
-    # updater = Updater(os.environ.get('BOT_TOKEN'))
-    # chat_id = int(os.environ.get('GROUP_ID'))
-    f = open('config.json', 'r')
-    config = json.load(f)
+    updater = Updater(os.getenv('BOT_TOKEN')  )
+    chat_id = int(os.environ.get('GROUP_ID'))
+    # f = open('config.json', 'r')
+    # config = json.load(f)
 
-    updater = Updater(config['BOT_TOKEN'])
-    chat_id = config['GROUP_ID']
+    # updater = Updater(config['BOT_TOKEN'])
+    # chat_id = config['GROUP_ID']
     # WARNING: Please delete config file or make it secure to avoid leaking sensitive information
     bot = InLaTeXbot(updater, chat_id)
     bot.launch()
