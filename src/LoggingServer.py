@@ -3,12 +3,15 @@ from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
 from multiprocessing import Queue
 from threading import Thread
+from pathlib import Path
 
 
 class LoggingServer():
-
+    logFile = Path('log/inlatexbot.log')
+    logFile.parent.mkdir(parents=True, exist_ok=True)
+    logFile.touch(exist_ok=True)
     loggingHandler = TimedRotatingFileHandler(
-        'log/inlatexbot.log', when="midnight", backupCount=100)
+        logFile, when="midnight", backupCount=100)
     loggingFormat = '%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s'
     loggingFormatter = Formatter(fmt=loggingFormat, datefmt='%I:%M:%S')
     loggingHandler.setFormatter(loggingFormatter)
