@@ -16,7 +16,7 @@ class LatexConverter():
         "HOME": os.environ.get("HOME"),
         "XDG_DATA_HOME": os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")),
         "OSFONTDIR": os.path.expanduser("~/.local/share/fonts//") + ":/usr/local/share/fonts//:/usr/share/fonts//",
-        "openin_any": "p",
+        # "openin_any": "p",
         "openout_any": "p",
     }
 
